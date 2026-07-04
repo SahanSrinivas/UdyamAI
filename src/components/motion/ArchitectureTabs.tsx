@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, Brain, Building2, Cloud, Cpu, Database, Layers,
-  ShieldCheck, Smartphone, Zap, Check,
+  ShieldCheck, Smartphone, Zap,
 } from "lucide-react";
 
 type TabKey = "overview" | "client" | "api" | "ai" | "data" | "rails" | "deploy" | "compliance";
@@ -27,13 +27,13 @@ export function ArchitectureTabs() {
     <div className="mx-auto max-w-[1400px] px-6 py-10">
       {/* Hero */}
       <div className="mb-10">
-        <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-white/60">
+        <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-black/60">
           Production architecture · post-Round-1
         </div>
-        <h1 className="mt-3 font-serif text-[52px] leading-[0.96] tracking-tight text-white sm:text-[80px]">
+        <h1 className="mt-3 font-serif text-[52px] leading-[0.96] tracking-tight text-black sm:text-[80px]">
           The stack IDBI can deploy.
         </h1>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-white/60">
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
           Everything below runs on AWS in ap-south-1 (Mumbai). Auditable, scalable, RBI-compliant.
           The prototype is Next.js on Amplify; the production build swaps in Django, RDS Postgres,
           DocumentDB, Bedrock, and Fargate — same UI, same code, real rails.
@@ -42,21 +42,21 @@ export function ArchitectureTabs() {
         {/* KPI strip */}
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "AWS services", value: "25+", accent: "text-rh-lime" },
-            { label: "Region", value: "ap-south-1", accent: "text-rh-lime" },
-            { label: "SLA target", value: "99.95%", accent: "text-rh-lime" },
-            { label: "Cost @ 100k MAU", value: "₹4.8L / mo", accent: "text-rh-lime" },
+            { label: "AWS services", value: "25+" },
+            { label: "Region", value: "ap-south-1" },
+            { label: "SLA target", value: "99.95%" },
+            { label: "Cost @ 100k MAU", value: "₹4.8L / mo" },
           ].map((s) => (
-            <div key={s.label} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">{s.label}</div>
-              <div className={`mt-1 tabular font-serif text-[32px] leading-none ${s.accent}`}>{s.value}</div>
+            <div key={s.label} className="rounded-2xl border border-black/10 bg-white/70 p-5 backdrop-blur">
+              <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">{s.label}</div>
+              <div className="mt-1 tabular font-serif text-[32px] leading-none text-black">{s.value}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Tabs bar */}
-      <div className="sticky top-16 z-30 -mx-6 mb-8 border-y border-white/10 bg-black/95 backdrop-blur">
+      {/* Tabs bar — sticky, mist-tinted */}
+      <div className="sticky top-16 z-30 -mx-6 mb-8 border-y border-black/10 bg-mist-100/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center gap-1 overflow-x-auto px-6 py-2">
           {TABS.map((t) => {
             const on = active === t.key;
@@ -65,14 +65,14 @@ export function ArchitectureTabs() {
                 key={t.key}
                 onClick={() => setActive(t.key)}
                 className={`relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold transition ${
-                  on ? "text-black" : "text-white/70 hover:text-white"
+                  on ? "text-white" : "text-black/70 hover:text-black"
                 }`}
               >
                 {on && (
                   <motion.span
                     layoutId="arch-tab"
                     transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    className="absolute inset-0 rounded-full bg-rh-lime"
+                    className="absolute inset-0 rounded-full bg-black"
                   />
                 )}
                 <span className="relative z-10 inline-flex items-center gap-1.5">
@@ -124,7 +124,7 @@ function OverviewTab({ onNav }: { onNav: (k: TabKey) => void }) {
         <button
           key={t.key}
           onClick={() => onNav(t.key)}
-          className="group flex w-full items-center justify-between gap-6 rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-6 text-left transition hover:border-white/30"
+          className="group flex w-full items-center justify-between gap-6 rounded-3xl border border-black/10 bg-white/70 p-6 text-left backdrop-blur transition hover:border-black/40 hover:bg-white/90"
         >
           <div className="flex items-center gap-5">
             <div
@@ -134,18 +134,18 @@ function OverviewTab({ onNav }: { onNav: (k: TabKey) => void }) {
               <span className="font-mono font-bold">{String(i + 1).padStart(2, "0")}</span>
             </div>
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Tier</div>
-              <div className="mt-0.5 font-serif text-[24px] leading-tight text-white">{t.name}</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">Tier</div>
+              <div className="mt-0.5 font-serif text-[24px] leading-tight text-black">{t.name}</div>
             </div>
           </div>
           <div className="hidden flex-1 gap-2 md:flex md:flex-wrap md:justify-center">
             {t.services.map((s) => (
-              <span key={s} className="rounded-full border border-white/15 bg-white/[0.02] px-3 py-1 text-[11px] font-semibold text-white/80">
+              <span key={s} className="rounded-full border border-black/15 bg-white px-3 py-1 text-[11px] font-semibold text-black/80">
                 {s}
               </span>
             ))}
           </div>
-          <ArrowRight className="h-5 w-5 text-white/40 transition group-hover:translate-x-1 group-hover:text-white" />
+          <ArrowRight className="h-5 w-5 text-black/40 transition group-hover:translate-x-1 group-hover:text-black" />
         </button>
       ))}
     </div>
@@ -191,7 +191,7 @@ function AiTab() {
     <div className="space-y-6">
       <TableCard title="AI · ML tier" subtitle="Auditable by default — LR is the decision, everything else is a feature" rows={rows} accent="#22c55e" />
       <NoteCard>
-        <span className="font-semibold text-rh-lime">Regulatory note:</span> credit decisions stay
+        <span className="font-semibold text-black">Regulatory note:</span> credit decisions stay
         interpretable (LR only). LSTM + graph outputs feed <em>into</em> the LR as features, not as
         the final decision. This passes RBI PRISM model-risk review.
       </NoteCard>
@@ -223,34 +223,34 @@ function RailsTab() {
   ];
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-6">
-        <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Regulated integration rails</div>
-        <div className="mt-2 font-serif text-[28px] leading-tight text-white">Every pipe UdyamAI plugs into</div>
+      <div className="rounded-3xl border border-black/10 bg-white/70 p-6 backdrop-blur">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">Regulated integration rails</div>
+        <div className="mt-2 font-serif text-[28px] leading-tight text-black">Every pipe UdyamAI plugs into</div>
         <div className="mt-6 space-y-2">
           {rails.map(([name, provider, purpose, dir]) => (
-            <div key={name} className="grid grid-cols-[24px_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,2fr)] items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-4">
+            <div key={name} className="grid grid-cols-[24px_minmax(0,1.5fr)_minmax(0,1.5fr)_minmax(0,2fr)] items-center gap-4 rounded-2xl border border-black/10 bg-white p-4">
               <div
                 className={`grid h-6 w-6 place-items-center rounded-md text-[10px] font-bold ${
-                  dir === "in" ? "bg-rh-lime text-black" : "bg-[#a855f7] text-white"
+                  dir === "in" ? "bg-black text-rh-lime" : "bg-[#a855f7] text-white"
                 }`}
                 title={dir === "in" ? "Inbound (we consume)" : "Outbound (we send)"}
               >
                 {dir === "in" ? "↓" : "↑"}
               </div>
-              <div className="font-semibold text-white">{name}</div>
-              <div className="text-[13px] text-white/70">{provider}</div>
-              <div className="text-[12px] text-white/60">{purpose}</div>
+              <div className="font-semibold text-black">{name}</div>
+              <div className="text-[13px] text-black/70">{provider}</div>
+              <div className="text-[12px] text-black/60">{purpose}</div>
             </div>
           ))}
         </div>
       </div>
       <NoteCard>
-        <span className="font-semibold text-rh-lime">Finvu note:</span> supports Web SDK + Direct
+        <span className="font-semibold text-black">Finvu note:</span> supports Web SDK + Direct
         API + Sandbox at{" "}
-        <a href="https://finvu.github.io/sandbox/" target="_blank" rel="noreferrer" className="underline">
+        <a href="https://finvu.github.io/sandbox/" target="_blank" rel="noreferrer" className="font-semibold text-black underline">
           finvu.github.io/sandbox
         </a>{" "}
-        · Pvt Ltd sandbox onboarding via <span className="font-mono text-white">support@cookiejar.co.in</span> · production requires
+        · Pvt Ltd sandbox onboarding via <span className="font-mono font-semibold text-black">support@cookiejar.co.in</span> · production requires
         FIU/LSP arrangement with a licensed bank or NBFC (IDBI qualifies).
       </NoteCard>
     </div>
@@ -274,7 +274,7 @@ function DeployTab() {
     ["WAF", "AWS WAF + Shield", "Protects public endpoints"],
     ["DNS", "Route 53", "udyamai.credit · udyamai.in"],
   ];
-  return <TableCard title="Deploy · GCP-native → AWS for IDBI" subtitle="Everything runs on AWS in ap-south-1" rows={rows} accent="#CCFF5E" />;
+  return <TableCard title="Deploy · AWS for IDBI" subtitle="Everything runs on AWS in ap-south-1" rows={rows} accent="#CCFF5E" />;
 }
 
 function ComplianceTab() {
@@ -301,26 +301,27 @@ function TableCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.01] p-6">
-      <div className="flex items-baseline justify-between">
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: accent }}>
-            {title}
-          </div>
-          <div className="mt-2 font-serif text-[28px] leading-tight text-white">{subtitle}</div>
+    <div className="rounded-3xl border border-black/10 bg-white/70 p-6 backdrop-blur">
+      <div className="flex items-baseline gap-3">
+        <div
+          className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest"
+          style={{ background: accent, color: accent === "#CCFF5E" ? "#000" : "#fff" }}
+        >
+          {title}
         </div>
       </div>
-      <div className="mt-6 overflow-hidden rounded-2xl border border-white/10">
+      <div className="mt-3 font-serif text-[28px] leading-tight text-black">{subtitle}</div>
+      <div className="mt-6 overflow-hidden rounded-2xl border border-black/10">
         {rows.map(([col1, col2, col3], i) => (
           <div
             key={col1 + i}
-            className={`grid grid-cols-1 gap-3 border-b border-white/5 p-4 text-[13px] last:border-b-0 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,2fr)] ${
-              i % 2 === 0 ? "bg-white/[0.02]" : "bg-transparent"
+            className={`grid grid-cols-1 gap-3 border-b border-black/5 p-4 text-[13px] last:border-b-0 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,2fr)] ${
+              i % 2 === 0 ? "bg-white" : "bg-white/40"
             }`}
           >
-            <div className="font-semibold text-white">{col1}</div>
-            <div className="text-white/80">{col2}</div>
-            <div className="text-white/60">{col3}</div>
+            <div className="font-semibold text-black">{col1}</div>
+            <div className="text-black/75">{col2}</div>
+            <div className="text-black/60">{col3}</div>
           </div>
         ))}
       </div>
@@ -330,8 +331,8 @@ function TableCard({
 
 function NoteCard({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-rh-lime/20 bg-rh-lime/[0.04] p-5 text-[13px] leading-relaxed text-white/80">
-      <div className="inline-flex items-center gap-1.5 text-rh-lime">
+    <div className="rounded-2xl border-2 border-black/10 bg-white/80 p-5 text-[13px] leading-relaxed text-black/75">
+      <div className="inline-flex items-center gap-1.5 text-black">
         <Cpu className="h-3.5 w-3.5" />
         <span className="text-[10px] font-bold uppercase tracking-widest">Note</span>
       </div>
