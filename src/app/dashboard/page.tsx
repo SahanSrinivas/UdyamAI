@@ -18,6 +18,8 @@ import { ScoreSparkline } from "@/components/motion/ScoreSparkline";
 import { SectorCohort } from "@/components/motion/SectorCohort";
 import { CounterpartyGraph } from "@/components/motion/CounterpartyGraph";
 import { ApplicationTimeline } from "@/components/motion/ApplicationTimeline";
+import { AlternativeSignals } from "@/components/motion/AlternativeSignals";
+import { getSectorSignals } from "@/lib/sectorSignals";
 import { TopNav } from "@/components/TopNav";
 import { getAllModels } from "@/lib/mlModel";
 import { PROFILE_TYPE_LABEL } from "@/lib/mockData";
@@ -44,6 +46,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
   const [explanation, market] = await Promise.all([explainScore(card, lang), getMarketSnapshot()]);
   const models = getAllModels();
   const history = getHistory(profile.gstin, card.overall);
+  const sectorSignals = getSectorSignals(profile.sector);
 
   return (
     <main className="min-h-screen bg-black">
@@ -128,6 +131,21 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
             </Link>
           </div>
           <ApplicationTimeline history={history} currentScore={card.overall} />
+        </div>
+      </section>
+
+      {/* Sector-adaptive alternative signals — cream */}
+      <section className="bg-cream-fade">
+        <div className="mx-auto max-w-[1600px] px-6 py-16">
+          <div className="mb-6">
+            <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-black/60">
+              Alternative signals · sector-adaptive
+            </div>
+            <h2 className="mt-2 font-serif text-[42px] leading-[0.98] tracking-serif text-black sm:text-[56px]">
+              Beyond the traditional documents.
+            </h2>
+          </div>
+          <AlternativeSignals sector={profile.sector} signals={sectorSignals} />
         </div>
       </section>
 
