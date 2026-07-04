@@ -40,15 +40,65 @@ export function Hero() {
             transition={{ delay: 0.4, duration: 0.5 }}
             className="mt-8 max-w-lg text-[17px] leading-[1.55] text-black/70"
           >
-            We're pulling MSME credit into daylight. See exactly where you stand with 64 lenders —
+            We&rsquo;re pulling MSME credit into daylight. See exactly where you stand with 64 lenders —
             in real time — before you file a single application.
           </motion.p>
+
+          {/* 12-signal proof card */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.55 }}
+            className="mt-8 max-w-xl overflow-hidden rounded-2xl border border-black/10 bg-white/70 backdrop-blur"
+          >
+            <div className="flex items-baseline justify-between border-b border-black/10 bg-black/[0.03] px-5 py-3">
+              <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-black/60">
+                12 signals · one score
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-black/50">
+                consent-based · public-portal
+              </div>
+            </div>
+            <div className="grid grid-cols-3 divide-x divide-black/10 text-[11px]">
+              <div className="px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">
+                  4 · Base
+                </div>
+                <div className="mt-1 font-semibold leading-snug text-black">
+                  GST · UPI · AA · EPFO
+                </div>
+                <div className="mt-1 text-[10px] text-black/55">via Finvu</div>
+              </div>
+              <div className="px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">
+                  4 · Sector
+                </div>
+                <div className="mt-1 font-semibold leading-snug text-black">
+                  Electricity · Certs · Digital · Trade
+                </div>
+                <div className="mt-1 text-[10px] text-black/55">utility FIP + govt portals</div>
+              </div>
+              <div className="px-4 py-3">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-black/50">
+                  4 · Alt-data
+                </div>
+                <div className="mt-1 font-semibold leading-snug text-black">
+                  Satellite · POS · Imports · TReDS
+                </div>
+                <div className="mt-1 text-[10px] text-black/55">specialised APIs</div>
+              </div>
+            </div>
+            <div className="border-t border-black/10 bg-black/[0.02] px-5 py-2.5 text-[11px] text-black/65">
+              <span className="font-semibold text-black">No scraping. No shortcuts.</span> Every signal
+              is either consented via RBI-regulated rails or public-portal — zero regulatory exposure.
+            </div>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.55, duration: 0.5 }}
-            className="mt-10 flex flex-wrap items-center gap-3"
+            transition={{ delay: 0.6, duration: 0.5 }}
+            className="mt-8 flex flex-wrap items-center gap-3"
           >
             <Link
               href="/dashboard"
