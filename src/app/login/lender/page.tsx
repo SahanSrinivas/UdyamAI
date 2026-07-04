@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowLeft, ArrowRight, Building2, Loader2, ShieldCheck } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
@@ -12,6 +12,14 @@ import { DEMO_LENDERS } from "@/lib/auth";
 const MAROON = "#78141e";
 
 export default function LenderLogin() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-cream-fade" />}>
+      <LenderLoginInner />
+    </Suspense>
+  );
+}
+
+function LenderLoginInner() {
   const search = useSearchParams();
   const mismatch = search.get("mismatch");
   const [employeeId, setEmployeeId] = useState("");

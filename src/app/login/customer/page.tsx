@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import { TopNav } from "@/components/TopNav";
@@ -14,6 +14,14 @@ import { DEMO_CUSTOMERS, DEMO_OTP } from "@/lib/auth";
 type Channel = "whatsapp" | "sms" | "voice";
 
 export default function CustomerLogin() {
+  return (
+    <Suspense fallback={<main className="min-h-screen bg-cream-fade" />}>
+      <CustomerLoginInner />
+    </Suspense>
+  );
+}
+
+function CustomerLoginInner() {
   const search = useSearchParams();
   const mismatch = search.get("mismatch");
   const [step, setStep] = useState<"gstin" | "otp">("gstin");

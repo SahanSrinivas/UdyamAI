@@ -8,7 +8,10 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+// Serverless-safe storage — /tmp is writable in Amplify Lambda,
+// Cloud Run, Fargate, Vercel serverless. Falls back to .data locally.
+const IS_SERVERLESS = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
+const DATA_DIR = IS_SERVERLESS ? "/tmp/udyamai" : path.join(process.cwd(), ".data");
 const PIPELINE_FILE = path.join(DATA_DIR, "pipeline.json");
 
 export type LoanPurpose = "working_capital" | "term_loan" | "invoice_finance" | "equipment";
