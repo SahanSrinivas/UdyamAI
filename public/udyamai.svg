@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="#CCFF5E"></rect>
+
+  <!-- Ring -->
+  <circle cx="256" cy="256" r="128" stroke="#111111" stroke-width="42" stroke-linecap="round" stroke-dasharray="610 150" transform="rotate(40 256 256)"></circle>
+
+  <!-- Lime gap highlight -->
+  <circle cx="256" cy="256" r="128" stroke="#CCFF5E" stroke-width="46" stroke-linecap="round" stroke-dasharray="90 700" transform="rotate(305 256 256)"></circle>
+
+  <!-- U -->
+  <path d="M212 194V282
+       C212 318 231 340 256 340
+       C281 340 300 318 300 282
+       V194" stroke="#111111" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
