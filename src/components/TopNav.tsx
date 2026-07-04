@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, Globe, LogOut, User } from "lucide-react";
+import { ChevronDown, Globe, LogOut, MessageCircle, User } from "lucide-react";
 import { Wordmark } from "./Logo";
 import { SESSION_COOKIE, decodeSession, type Session } from "@/lib/auth";
 
@@ -11,8 +11,8 @@ const NAV = [
   { label: "Health Card", href: "/dashboard" },
   { label: "For MSMEs", href: "/dashboard" },
   { label: "For Lenders", href: "/lender" },
+  { label: "Architecture", href: "/architecture" },
   { label: "AA · ULI · OCEN", href: "/" },
-  { label: "Support", href: "/" },
 ];
 
 function readSession(): Session | null {
@@ -65,12 +65,23 @@ export function TopNav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <button className="hidden items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium text-white/85 hover:text-white sm:inline-flex">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button className="hidden items-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-medium text-white/85 hover:text-white lg:inline-flex">
             <Globe className="h-3.5 w-3.5" />
             IN
             <ChevronDown className="h-3.5 w-3.5 opacity-60" />
           </button>
+
+          {/* WhatsApp — always visible · triggers the /onboarding conversational flow */}
+          <Link
+            href="/onboarding"
+            title="Sign up in WhatsApp · 3-minute onboarding"
+            className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#25D366] bg-[#25D366]/10 px-3 py-1.5 text-[13px] font-bold text-[#25D366] transition hover:bg-[#25D366] hover:text-black"
+          >
+            <MessageCircle className="h-3.5 w-3.5 fill-current" />
+            <span className="hidden sm:inline">WhatsApp</span>
+          </Link>
+
 
           {session ? (
             <div className="flex items-center gap-2">
