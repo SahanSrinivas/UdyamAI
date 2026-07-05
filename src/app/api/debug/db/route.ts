@@ -37,9 +37,15 @@ export async function GET() {
   const isRds = url.includes("amazonaws.com") || url.includes("rds.");
   report.detected_as_rds = isRds;
 
+  // Strip sslmode from URL — see comment in src/lib/agami/db.ts
+  const cleanUrl = isRds
+    ? url.replace(/([?&])sslmode=[^&]+&?/, "$1").replace(/[?&]$/, "")
+    : url;
+  report.sslmode_stripped = cleanUrl !== url;
+
   // Try to connect
   const pool = new Pool({
-    connectionString: url,
+    connectionString: cleanUrl,
     ssl: isRds ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: 8000,
     max: 1,
