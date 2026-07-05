@@ -243,3 +243,15 @@
 {"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/app/dashboard/page.tsx","timestamp":1783171201620,"sessionId":null}
 {"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/lib/sectorSignals.ts","timestamp":1783171215090,"sessionId":null}
 {"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/components/landing/Hero.tsx","timestamp":1783178113484,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/sql/schema.sql","timestamp":1783253330112,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/scripts/ingest_agami.py","timestamp":1783253378290,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/lib/agami/db.ts","timestamp":1783253387974,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/lib/agami/parser.ts","timestamp":1783253410437,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/lib/agami/itrData.ts","timestamp":1783253440148,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/components/motion/ItrVerifiedChip.tsx","timestamp":1783253464103,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/app/dashboard/page.tsx","timestamp":1783253476603,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/app/dashboard/page.tsx","timestamp":1783253483181,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/app/dashboard/page.tsx","timestamp":1783253491288,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/src/lib/agami/lrRetrain.ts","timestamp":1783253519907,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/AGAMI_INTEGRATION.md","timestamp":1783253551674,"sessionId":null}
+{"type":"edit","file":"/Users/sahan_kolluri/Pegasus/Work/IDBI-Innovate/.env.example","timestamp":1783253560517,"sessionId":null}
