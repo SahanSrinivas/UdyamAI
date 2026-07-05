@@ -21,9 +21,11 @@ import { ApplicationTimeline } from "@/components/motion/ApplicationTimeline";
 import { AlternativeSignals } from "@/components/motion/AlternativeSignals";
 import { ItrVerifiedChip } from "@/components/motion/ItrVerifiedChip";
 import { BankStatementsPanel } from "@/components/motion/BankStatementsPanel";
+import { RetrainBadge } from "@/components/motion/RetrainBadge";
 import { getSectorSignals } from "@/lib/sectorSignals";
 import { getItrForGstin, itrSignalImpact } from "@/lib/agami/itrData";
 import { getStatementForGstin } from "@/lib/agami/statements";
+import { getLatestRuns } from "@/lib/agami/lrRetrain";
 import { TopNav } from "@/components/TopNav";
 import { getAllModels } from "@/lib/mlModel";
 import { PROFILE_TYPE_LABEL } from "@/lib/mockData";
@@ -49,6 +51,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
   const card = computeHealthCard(profile);
   const [explanation, market] = await Promise.all([explainScore(card, lang), getMarketSnapshot()]);
   const models = getAllModels();
+  const retrainRuns = await getLatestRuns().catch(() => []);
   const history = getHistory(profile.gstin, card.overall);
   const sectorSignals = getSectorSignals(profile.sector);
   const itr = await getItrForGstin(profile.gstin);
@@ -220,7 +223,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
 
       {/* Model transparency — sage */}
       <section className="bg-sage-fade">
-        <div className="mx-auto max-w-[1600px] px-6 py-16">
+        <div className="mx-auto max-w-[1600px] space-y-6 px-6 py-16">
+          {retrainRuns.length > 0 && <RetrainBadge runs={retrainRuns} />}
           <ModelCard models={models} />
         </div>
       </section>
