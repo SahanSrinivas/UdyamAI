@@ -226,7 +226,10 @@ function CustomerLoginInner() {
                 >
                   <div className="font-mono text-[11px] text-black/60">{c.gstin}</div>
                   <div className="mt-1 text-[13px] font-semibold text-black">{c.name}</div>
-                  <div className="mt-0.5 text-[11px] text-black/60">{c.phone}</div>
+                  <div className="mt-0.5 text-[10px] text-black/50">
+                    Files ITR as {c.legalName}
+                  </div>
+                  <div className="mt-1 text-[11px] text-black/60">{c.phone}</div>
                 </button>
               ))}
             </div>
