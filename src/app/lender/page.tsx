@@ -11,6 +11,8 @@ import { TopNav } from "@/components/TopNav";
 import { MarketStrip } from "@/components/motion/MarketStrip";
 import { LenderPortfolio } from "@/components/motion/LenderPortfolio";
 import { IncomingApplications } from "@/components/motion/IncomingApplications";
+import { BounceAlertsPanel } from "@/components/motion/BounceAlertsPanel";
+import { getRecentBounces } from "@/lib/agami/statements";
 import { formatINR } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +84,7 @@ export default async function LenderDashboard() {
   const portfolioStats = getPortfolioStats(bankName);
   const portfolioAlerts = getAlerts(bankName);
   const portfolioLoans = getPortfolio(bankName);
+  const bounceAlerts = await getRecentBounces(15).catch(() => []);
 
   const totalLeads = leads.length;
   const avgConf = leads.reduce((s, l) => s + l.confidence, 0) / totalLeads;
@@ -214,6 +217,10 @@ export default async function LenderDashboard() {
             alerts={portfolioAlerts}
             loans={portfolioLoans}
           />
+
+          {bounceAlerts.length > 0 && (
+            <BounceAlertsPanel alerts={bounceAlerts} />
+          )}
         </div>
       </section>
 

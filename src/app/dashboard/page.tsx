@@ -20,8 +20,10 @@ import { CounterpartyGraph } from "@/components/motion/CounterpartyGraph";
 import { ApplicationTimeline } from "@/components/motion/ApplicationTimeline";
 import { AlternativeSignals } from "@/components/motion/AlternativeSignals";
 import { ItrVerifiedChip } from "@/components/motion/ItrVerifiedChip";
+import { BankStatementsPanel } from "@/components/motion/BankStatementsPanel";
 import { getSectorSignals } from "@/lib/sectorSignals";
 import { getItrForGstin, itrSignalImpact } from "@/lib/agami/itrData";
+import { getStatementForGstin } from "@/lib/agami/statements";
 import { TopNav } from "@/components/TopNav";
 import { getAllModels } from "@/lib/mlModel";
 import { PROFILE_TYPE_LABEL } from "@/lib/mockData";
@@ -51,6 +53,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
   const sectorSignals = getSectorSignals(profile.sector);
   const itr = await getItrForGstin(profile.gstin);
   const itrImpact = itr ? itrSignalImpact(itr) : null;
+  const statement = await getStatementForGstin(profile.gstin).catch(() => null);
 
   return (
     <main className="min-h-screen bg-black">
@@ -154,6 +157,12 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
           {itr && itrImpact && (
             <div className="mt-8 max-w-3xl">
               <ItrVerifiedChip itr={itr} impact={itrImpact.impact} status={itrImpact.status} />
+            </div>
+          )}
+
+          {statement && (
+            <div className="mt-10">
+              <BankStatementsPanel summary={statement} />
             </div>
           )}
         </div>
