@@ -15,9 +15,23 @@ export function HeroArt() {
   const CORE_R = 175;
   const SPOKE_COUNT = 24;
 
+  /**
+   * Round to 4 decimals before the value reaches an SVG attribute.
+   *
+   * ECMAScript does not require Math.sin/Math.cos to be correctly rounded, so
+   * Node's V8 and the browser's can disagree in the last bit — e.g. the server
+   * serialises "-219.97045256124738" while the client computes
+   * -219.97045256124736. React sees different attributes and hydration fails.
+   *
+   * The engines agree to ~1e-14, far tighter than 1e-4, so rounding makes the
+   * output identical on both sides. Math.round IS spec-deterministic. At a
+   * 720-unit viewBox, 4 decimals is well below one device pixel.
+   */
+  const q = (n: number) => Math.round(n * 1e4) / 1e4;
+
   const polar = (r: number, deg: number) => {
     const rad = (deg * Math.PI) / 180;
-    return { x: r * Math.cos(rad), y: r * Math.sin(rad) };
+    return { x: q(r * Math.cos(rad)), y: q(r * Math.sin(rad)) };
   };
 
   const arcCirc = 2 * Math.PI * ARC_R;
@@ -68,8 +82,17 @@ export function HeroArt() {
 
         {/* 24 chakra spokes (Ashoka-chakra-inspired), slowly rotating */}
         <motion.g
-          animate={reduce ? undefined : { rotate: 360 }}
-          transition={{ duration: 240, ease: "linear", repeat: Infinity }}
+          // Explicit `initial` so the SSR HTML and the first client render
+          // both start at rotate 0. Without it framer-motion SSRs the
+          // `animate` target, which differs once useReducedMotion resolves on
+          // the client. Reduced motion then simply never starts the spin.
+          initial={{ rotate: 0 }}
+          animate={reduce ? { rotate: 0 } : { rotate: 360 }}
+          transition={
+            reduce
+              ? { duration: 0 }
+              : { duration: 240, ease: "linear", repeat: Infinity }
+          }
           style={{ transformOrigin: "0 0" }}
         >
           {Array.from({ length: SPOKE_COUNT }).map((_, i) => {

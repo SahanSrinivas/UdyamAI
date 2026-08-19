@@ -56,9 +56,19 @@ export function ScoreCard({ overall, band }: { overall: number; band: string }) 
             fill="none"
             strokeLinecap="round"
             strokeDasharray={C}
-            initial={{ strokeDashoffset: reduce ? C - pct * C : C }}
+            // `initial` must not depend on useReducedMotion: it is null on the
+            // server and true/false on the client, so branching here emits a
+            // different strokeDashoffset in the SSR HTML than in the first
+            // client render and hydration fails. Start from C either way and
+            // collapse the duration to 0 when motion is reduced — same end
+            // state, no mismatch.
+            initial={{ strokeDashoffset: C }}
             animate={{ strokeDashoffset: C - pct * C }}
-            transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+            transition={
+              reduce
+                ? { duration: 0 }
+                : { duration: 1.4, ease: [0.16, 1, 0.3, 1], delay: 0.2 }
+            }
           />
         </svg>
         <div className="absolute grid place-items-center text-center">

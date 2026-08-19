@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import type { ScoreEvent } from "@/lib/mockData";
 
@@ -25,10 +26,19 @@ export function ScoreSparkline({
   const areaPath = `${path} L ${xs[xs.length - 1].toFixed(2)} ${h - pad} L ${xs[0].toFixed(2)} ${h - pad} Z`;
 
   const positive = lastEvent.delta >= 0;
-  const refreshed = new Date(lastRefreshedIso);
-  const now = Date.now();
-  const minsAgo = Math.max(1, Math.round((now - refreshed.getTime()) / 60000));
-  const refreshedLabel = minsAgo < 60 ? `${minsAgo} min ago` : `${Math.round(minsAgo / 60)} hours ago`;
+
+  // Date.now() during render is a hydration hazard: the server stamps one
+  // time, the client another, and React rejects the mismatched text. Compute
+  // the relative label only after mount so SSR and the first client render
+  // agree on the placeholder.
+  const [refreshedLabel, setRefreshedLabel] = useState("just now");
+  useEffect(() => {
+    const mins = Math.max(
+      1,
+      Math.round((Date.now() - new Date(lastRefreshedIso).getTime()) / 60000),
+    );
+    setRefreshedLabel(mins < 60 ? `${mins} min ago` : `${Math.round(mins / 60)} hours ago`);
+  }, [lastRefreshedIso]);
 
   return (
     <div className="rounded-2xl border border-line-strong bg-base-900 p-5 shadow-card">

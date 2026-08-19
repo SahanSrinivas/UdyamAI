@@ -41,9 +41,17 @@ export function SubScoreGrid({ subScores, theme = "dark" }: { subScores: SubScor
             </div>
             <div className={`mt-4 h-1.5 overflow-hidden rounded-full ${isLight ? "bg-black/10" : "bg-base-800"}`}>
               <motion.div
-                initial={{ width: reduce ? `${pct}%` : 0 }}
+                // `initial` must be reduced-motion-independent — the hook is
+                // null on the server and true/false on the client, so
+                // branching here breaks hydration. Collapse the duration
+                // instead: same end state, no mismatch.
+                initial={{ width: 0 }}
                 animate={{ width: `${pct}%` }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.5 }}
+                transition={
+                  reduce
+                    ? { duration: 0 }
+                    : { duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.5 }
+                }
                 className="h-full rounded-full"
                 style={{ background: s.color }}
               />

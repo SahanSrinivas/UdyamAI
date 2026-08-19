@@ -122,9 +122,14 @@ function QuoteCard({
         </div>
         <div className={`h-2 overflow-hidden rounded-full ${barBg}`}>
           <motion.div
-            initial={{ width: reduce ? `${pct}%` : 0 }}
+            // Reduced-motion must not change `initial` — see CountUp for why.
+            initial={{ width: 0 }}
             animate={{ width: `${pct}%` }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+            transition={
+              reduce
+                ? { duration: 0 }
+                : { duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.4 }
+            }
             className={`h-full rounded-full ${isLight ? "bg-black" : "bg-gradient-to-r from-rh-lime-dim to-rh-lime-bright"}`}
           />
         </div>

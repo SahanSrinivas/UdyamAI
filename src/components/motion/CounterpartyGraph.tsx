@@ -13,6 +13,24 @@ export function CounterpartyGraph({ profile }: { profile: MSMEProfile }) {
   const centerR = 40;
   const orbit = 120;
 
+  /**
+   * Quantise before the value reaches an SVG attribute.
+   *
+   * Math.sin/Math.cos are not required to be correctly rounded, so Node and
+   * the browser can differ in the last bit — enough for React to reject
+   * hydration on x/y attributes. Rounding to 4 decimals makes both sides
+   * produce the same string; Math.round itself is spec-deterministic.
+   */
+  const q = (n: number) => Math.round(n * 1e4) / 1e4;
+
+  /** Position of buyer i on the orbit. Single source for edges and nodes. */
+  const nodePos = (i: number) => {
+    const angle = (-90 + (i * 360) / buyers.length) * (Math.PI / 180);
+    return { bx: q(cx + Math.cos(angle) * orbit), by: q(cy + Math.sin(angle) * orbit) };
+  };
+
+  const maxShare = Math.max(...buyers.map((x) => x.revenueShare));
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -45,10 +63,8 @@ export function CounterpartyGraph({ profile }: { profile: MSMEProfile }) {
 
         {/* edges */}
         {buyers.map((b, i) => {
-          const angle = (-90 + (i * 360) / buyers.length) * (Math.PI / 180);
-          const bx = cx + Math.cos(angle) * orbit;
-          const by = cy + Math.sin(angle) * orbit;
-          const isHighest = b.revenueShare === Math.max(...buyers.map((x) => x.revenueShare));
+          const { bx, by } = nodePos(i);
+          const isHighest = b.revenueShare === maxShare;
           const edgeColor = isHighest && concentrationRisk ? "#FA5252" : "#1a3a6d";
           const edgeWidth = 1 + b.revenueShare * 14;
           return (
@@ -72,10 +88,8 @@ export function CounterpartyGraph({ profile }: { profile: MSMEProfile }) {
 
         {/* buyer nodes */}
         {buyers.map((b, i) => {
-          const angle = (-90 + (i * 360) / buyers.length) * (Math.PI / 180);
-          const bx = cx + Math.cos(angle) * orbit;
-          const by = cy + Math.sin(angle) * orbit;
-          const isHighest = b.revenueShare === Math.max(...buyers.map((x) => x.revenueShare));
+          const { bx, by } = nodePos(i);
+          const isHighest = b.revenueShare === maxShare;
           const nodeR = 12 + b.revenueShare * 16;
           const fill = isHighest && concentrationRisk ? "#FA5252" : "#1a3a6d";
           const label = b.name.length > 28 ? b.name.slice(0, 26) + "…" : b.name;
