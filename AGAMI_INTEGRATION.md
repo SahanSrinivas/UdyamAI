@@ -7,13 +7,15 @@ Both are **Apache 2.0** licensed by AgamiAI Inc. and attributed in-product.
 ## Runtime shape
 
 There is no database and no configuration. The corpus is committed under `src/data/agami/` and
-compiled into the Cloud Run image, so a fresh clone renders every real-data panel on the first
+compiled into the build, so a fresh clone renders every real-data panel on the first
 `npm run dev` — the ITR chip, the bank-statement panel, the lender bounce feed and the retrain
 badge. See `ARCHITECTURE.md` §5.3 for why this is not a database workload.
 
-`src/lib/agami/dataset.ts` reads the three fixtures on first use, parses every transaction
-description through `parser.ts`, indexes the result, and keeps it in process memory for the life
-of the container — measured at **62–79 ms**, once per instance.
+`src/lib/agami/dataset.ts` **imports** the three fixtures, so the bundler compiles them into the
+build and the data ships wherever the code ships — container, Amplify SSR or `next dev`, with no
+filesystem assumptions. On first use it parses every transaction description through `parser.ts`,
+indexes the result, and keeps it in process memory for the life of the instance — measured at
+**48 ms**, once.
 
 ## Rebuilding the corpus
 

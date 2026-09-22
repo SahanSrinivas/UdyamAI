@@ -78,7 +78,7 @@ discipline point the same way, twice.
         │  lib/agami/dataset  the corpus, parsed once per process │
         │  lib/ocen           Loan Agent protocol contract        │
         ├────────────────────────────────────────────────────────┤
-        │  /app/src/data/agami/*.json   ← 3.7 MB, in the image    │
+        │  src/data/agami/*.json  → compiled into the bundle      │
         │     accounts 91 KB · transactions 3.5 MB · itr 35 KB    │
         │  /tmp/udyamai/                ← per-instance scratch    │
         │     pipeline.json · retrain.json                        │
@@ -243,7 +243,7 @@ choose to regenerate it. Specifically:
 | A CTE pair for per-account training features | Two passes in `src/lib/agami/lrRetrain.ts` |
 | `SELECT … WHERE failed = TRUE ORDER BY txn_date DESC` | A pre-sorted array in `src/lib/agami/dataset.ts` |
 
-The corpus parses and indexes **once per container instance** — measured at 62–79 ms — and every
+The corpus parses and indexes **once per container instance** — measured at 48 ms — and every
 request after that is a map lookup. Serving that from a managed Postgres instance would add a
 network hop, a connection pool to tune, a credential to rotate, a VPC to place it in, a connector
 to reach it and a NAT gateway for everything else. The honest description of that is not
@@ -405,15 +405,15 @@ Measured against the container image, not aspirational:
 
 | Path | Measured / target |
 |---|---|
-| Cold start — Node boot + corpus parse | **~79 ms** corpus parse on top of Node boot |
-| `/api/debug/dataset` (touches every fixture) | **~80 ms** cold, <5 ms warm |
+| Cold start — Node boot + corpus index | **~48 ms** on top of Node boot |
+| `/api/debug/dataset` (touches every fixture) | **~48 ms** cold, <5 ms warm |
 | `POST /api/retrain` (3 lenders × 300 epochs × 200 samples) | **20 ms** |
 | `/dashboard` full SSR render, warm | < 400 ms target |
 | Explanation — cold (Gemini) | < 1,200 ms, hard-capped at 2.8 s then falls back |
 
-Cold start is dominated by parsing 3.7 MB of JSON. That is the price of having no database, it is
-paid once per instance, and it is roughly an order of magnitude cheaper than the round trip it
-replaces.
+Cold start is dominated by indexing 3.7 MB of bundled JSON. That is the price of having no
+database, it is paid once per instance, and it is roughly an order of magnitude cheaper than the
+round trip it replaces.
 
 ### 8.3 Three code decisions that make the small sizing hold
 
@@ -459,7 +459,7 @@ is not a discount; it is three line items ceasing to exist:
 |---|---:|---|
 | NAT Gateway | USD 35/mo | Cloud Run's `private-ranges-only` egress needs no NAT (§7.3) |
 | RDS + storage + backups | USD 16/mo | No database (§5.3) |
-| App Runner warm instance | USD 8/mo | Scale-to-zero, and a ~79 ms cold start instead of 2–4 s |
+| App Runner warm instance | USD 8/mo | Scale-to-zero, and a ~48 ms corpus index instead of a 2–4 s cold start |
 
 ### 9.2 Demo Day (03 Sep)
 
@@ -612,6 +612,7 @@ Resolved by this revision and listed so the port does not reintroduce them:
 ```
 UdyamAI/
 ├── Dockerfile              Cloud Run image — Next.js standalone, non-root, /tmp state
+├── amplify.yml             AWS Amplify SSR — the interim deploy target
 ├── cloudbuild.yaml         Cloud Build → Artifact Registry → Cloud Run
 ├── DEPLOY.md               First-time setup, sizing, rollback
 ├── scripts/

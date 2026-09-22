@@ -43,7 +43,7 @@ export async function GET() {
   } catch (err) {
     report.status = "FAIL";
     report.error = (err as Error).message;
-    report.hint = "Run `npm run data:build` to regenerate src/data/agami/, or point AGAMI_DATA_DIR at the fixtures.";
+    report.hint = "The fixtures are compiled into the build. Run `npm run data:build` to regenerate src/data/agami/, then rebuild.";
     return NextResponse.json(report, { status: 500 });
   }
 

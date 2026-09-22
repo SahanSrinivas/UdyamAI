@@ -22,6 +22,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Switches next.config.mjs to `output: "standalone"`. Only the container build
+# sets this — Amplify SSR wants stock output. See next.config.mjs.
+ENV NEXT_STANDALONE=1
 RUN npm run build
 
 # ─── runner ──────────────────────────────────────────────────────
@@ -49,10 +52,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# The AgamiAI corpus is read with fs at runtime, so it is copied explicitly
-# rather than left to Next's file tracer. next.config.mjs also traces it; this
-# line is what guarantees it regardless of how tracing behaves.
-COPY --from=builder --chown=nextjs:nodejs /app/src/data ./src/data
+# The AgamiAI corpus needs no COPY — src/lib/agami/dataset.ts imports the three
+# fixtures, so webpack compiles them into the server bundle that .next/standalone
+# already carries.
 
 USER nextjs
 EXPOSE 8080

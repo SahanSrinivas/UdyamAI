@@ -114,7 +114,7 @@ A healthy service reports 200 accounts, 32,349 transactions, 277 bounces and
 {
   "status": "OK · bundled AgamiAI corpus loaded, no database in the request path",
   "dataset": { "accountCount": 200, "txnCount": 32349, "bounceCount": 277, "filingCount": 100 },
-  "load_ms": 81
+  "load_ms": 48
 }
 ```
 
@@ -140,9 +140,9 @@ Then click through the demo:
 | `--max-instances` | **10** | A cap, not a target. Raise it when there is traffic to justify it. |
 | `--concurrency` | **80** | SSR is not CPU-bound here; the default is fine. |
 
-Cold start is dominated by reading and parsing 3.7 MB of JSON — measured at ~80 ms on
-top of Node boot in the container. That is the cost of having no database, and it is a good
-trade.
+Cold start is dominated by indexing 3.7 MB of bundled JSON — measured at ~48 ms on
+top of Node boot in the container. That is the cost of having no database, and it is
+a good trade.
 
 ---
 
@@ -195,6 +195,43 @@ For anything beyond a single service — Cloud CDN, Cloud Armor, a shared
 anycast IP — put a Global External Application Load Balancer in front with a
 serverless NEG instead. The `/architecture` page's Deploy tab lists the full
 production shape.
+
+---
+
+## 8. Deploying to AWS Amplify instead (the interim target)
+
+Cloud Run is where this is going; Amplify is where it runs until then. Nothing
+in the app is Google-specific, so both work from the same commit.
+
+`amplify.yml` does exactly one thing: Amplify Console environment variables
+exist during the build but do not reach the SSR Lambda at request time, so it
+writes them into `.env.production`. Only the Gemini key is forwarded — there is
+no `DATABASE_URL` any more.
+
+Set **`GOOGLE_API_KEY`** in Amplify Console → App settings → Environment
+variables, then redeploy. Saving a variable does not rebuild; the forwarding
+only happens on a build that runs *after* the save.
+
+Without the key the app still deploys and every real-data panel still renders —
+the ITR chip, the bank-statement panel, the bounce feed and the retrain badge
+all read the bundled corpus. Only the vernacular explanation changes, falling
+back to deterministic offline text.
+
+**Two things to know:**
+
+- `next.config.mjs` only switches to `output: "standalone"` when
+  `NEXT_STANDALONE=1`, which just the Dockerfile sets. Amplify gets stock Next
+  output, so its compute bundle does not carry a second copy of
+  `node_modules`.
+- The corpus is `import`ed by `src/lib/agami/dataset.ts`, not read from disk, so
+  it is compiled into the server bundle and ships with the build. There is no
+  dependency on `process.cwd()` or on Amplify packaging `src/data`.
+
+Verify after deploying, same as Cloud Run:
+
+```bash
+curl -s https://<your-app>.amplifyapp.com/api/debug/dataset | jq '{status, dataset}'
+```
 
 ---
 

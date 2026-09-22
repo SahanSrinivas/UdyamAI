@@ -4,9 +4,9 @@
  * Replaces the AWS RDS Postgres pool that used to live in this directory. The
  * two AgamiAI open datasets (Apache 2.0) are downloaded once by
  * `scripts/build_agami_fixtures.mjs` and committed under src/data/agami/; this
- * module reads them off disk on first use, parses every transaction
- * description through `parser.ts`, and keeps the indexed result in process
- * memory for the life of the container.
+ * module imports them, parses every transaction description through
+ * `parser.ts` on first use, and keeps the indexed result in process memory for
+ * the life of the instance.
  *
  * Why no database: every query the app ran was a read-only aggregation over a
  * fixed 3.7 MB corpus. A Postgres instance to serve that is a network hop, a
@@ -18,12 +18,10 @@
  * `lrRetrain.ts`, which persists to the container's writable scratch.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import accountsJson from "@/data/agami/accounts.json";
+import txnJson from "@/data/agami/transactions.json";
+import itrJson from "@/data/agami/itr.json";
 import { parseDescription, type ParsedTxn } from "./parser";
-
-/** Override for containers that mount the fixtures somewhere other than cwd. */
-const DATA_DIR = process.env.AGAMI_DATA_DIR ?? join(process.cwd(), "src", "data", "agami");
 
 export type Account = {
   accountId: string;
@@ -112,23 +110,26 @@ type ItrFixture = { source: string; license: string; filingCount: number; filing
 
 let cached: Dataset | null = null;
 
-function readFixture<T>(name: string): T {
-  try {
-    return JSON.parse(readFileSync(join(DATA_DIR, name), "utf8")) as T;
-  } catch (err) {
-    throw new Error(
-      `Cannot read AgamiAI fixture ${name} from ${DATA_DIR}. ` +
-      `Run \`npm run data:build\` to generate it, or set AGAMI_DATA_DIR. ` +
-      `(${(err as Error).message})`
-    );
-  }
-}
+/**
+ * The fixtures are `import`ed rather than read with fs, deliberately.
+ *
+ * An fs read depends on the deployed bundle physically containing
+ * src/data/agami and on process.cwd() pointing at the project root — true in a
+ * container we build ourselves, not guaranteed on a managed SSR runtime that
+ * packages the app from Next's output tracing. A static import makes the
+ * bundler responsible instead, so the data ships wherever the code ships:
+ * Cloud Run, Amplify SSR, `next start`, `next dev`, all identical.
+ *
+ * The casts go through `unknown` because TypeScript infers a structural type
+ * from the JSON itself, which is close to but not the same as the hand-written
+ * types below (nullable columns widen differently). The fixtures are generated
+ * by scripts/build_agami_fixtures.mjs, so the shape is enforced there.
+ */
+const accountsFixture = accountsJson as unknown as AccountsFixture;
+const txnFixture = txnJson as unknown as TxnFixture;
+const itrFixture = itrJson as unknown as ItrFixture;
 
 function build(): Dataset {
-  const accountsFixture = readFixture<AccountsFixture>("accounts.json");
-  const txnFixture = readFixture<TxnFixture>("transactions.json");
-  const itrFixture = readFixture<ItrFixture>("itr.json");
-
   const accountsById = new Map(accountsFixture.accounts.map((a) => [a.accountId, a]));
   const txnsByAccount = new Map<string, Txn[]>();
   const bounces: Txn[] = [];
