@@ -23,16 +23,17 @@ export function RetrainBadge({ runs }: { runs: RetrainRun[] }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-rh-lime px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-black">
             <Activity className="h-3.5 w-3.5" />
-            Live retrain · AWS RDS
+            Live retrain · in-process
           </div>
           <h3 className="mt-3 font-serif text-[28px] leading-tight tracking-tight sm:text-[34px]">
             Trained on <span className="text-rh-lime tabular">{sampleCount}</span> real MSME accounts.
           </h3>
           <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-white/70">
             The LR calibrator retrains on-demand against{" "}
-            <span className="font-semibold text-white">AgamiAI&rsquo;s open bank-statement dataset</span>{" "}
-            in AWS Aurora Serverless v2. Every retrain is persisted to{" "}
-            <span className="font-mono text-rh-lime">lr_training_runs</span> so you can audit drift.
+            <span className="font-semibold text-white">AgamiAI&rsquo;s open bank-statement dataset</span>,
+            bundled into the Cloud Run image. Every run is persisted to{" "}
+            <span className="font-mono text-rh-lime">/tmp/udyamai/retrain.json</span> on the serving
+            instance so you can audit drift — Cloud SQL in production.
           </p>
         </div>
         <div className="hidden shrink-0 rounded-2xl border border-white/20 bg-white/5 px-4 py-3 sm:block">

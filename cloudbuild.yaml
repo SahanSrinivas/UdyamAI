@@ -1,0 +1,91 @@
+# UdyamAI · Cloud Build → Artifact Registry → Cloud Run
+#
+# Connect this to the repo (Cloud Build → Triggers → push to main) and every
+# push ships a new revision. Or run it by hand:
+#
+#   gcloud builds submit --config cloudbuild.yaml \
+#     --substitutions=_REGION=asia-south1,_SERVICE=udyamai
+#
+# See DEPLOY.md for first-time setup (APIs, Artifact Registry repo, secrets).
+
+substitutions:
+  _REGION: asia-south1
+  _REPOSITORY: udyamai
+  _SERVICE: udyamai
+  # Comma-separated Secret Manager bindings; set to "" to deploy without a
+  # Gemini key (the app falls back to its offline explanation).
+  _SECRETS: GOOGLE_API_KEY=udyamai-google-api-key:latest
+
+steps:
+  # Pick the immutable tag. Trigger builds get SHORT_SHA; a manual
+  # `gcloud builds submit` from a local directory does not, and an empty tag
+  # would push an unusable image — so fall back to BUILD_ID, which is always
+  # set. Written to /workspace so later steps read the same value.
+  - id: tag
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        TAG="${SHORT_SHA}"
+        if [ -z "$$TAG" ]; then TAG="build-$BUILD_ID"; fi
+        echo "$$TAG" > /workspace/tag
+        echo "Building tag: $$TAG"
+
+  # --cache-from lets a rebuild reuse the previous image's layers, which takes
+  # a no-op deploy from ~4 minutes to well under one.
+  - id: build
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}"
+        TAG="$$(cat /workspace/tag)"
+        docker pull "$$IMAGE:latest" || echo "no cached image yet — first build"
+        docker build \
+          --cache-from "$$IMAGE:latest" \
+          -t "$$IMAGE:$$TAG" \
+          -t "$$IMAGE:latest" \
+          .
+
+  - id: push
+    name: gcr.io/cloud-builders/docker
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}"
+        docker push --all-tags "$$IMAGE"
+
+  # Deploy the immutable tag, never :latest — so a rollback is a traffic split
+  # back to a revision that still points at the exact bytes it shipped.
+  - id: deploy
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        IMAGE="${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/${_SERVICE}"
+        TAG="$$(cat /workspace/tag)"
+        SECRET_FLAG=""
+        if [ -n "${_SECRETS}" ]; then SECRET_FLAG="--set-secrets=${_SECRETS}"; fi
+        gcloud run deploy "${_SERVICE}" \
+          --image "$$IMAGE:$$TAG" \
+          --region "${_REGION}" \
+          --platform managed \
+          --allow-unauthenticated \
+          --port 8080 \
+          --cpu 1 \
+          --memory 512Mi \
+          --min-instances 0 \
+          --max-instances 10 \
+          --concurrency 80 \
+          --timeout 60s \
+          $$SECRET_FLAG
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+timeout: 1200s

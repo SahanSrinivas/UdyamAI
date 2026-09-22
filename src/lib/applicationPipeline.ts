@@ -6,13 +6,10 @@
  */
 
 import { promises as fs } from "fs";
-import path from "path";
+import { RUNTIME_DATA_DIR, runtimeFile } from "./runtimeStore";
 
-// Serverless-safe storage — /tmp is writable in Amplify Lambda,
-// Cloud Run, Fargate, Vercel serverless. Falls back to .data locally.
-const IS_SERVERLESS = process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL || process.env.LAMBDA_TASK_ROOT;
-const DATA_DIR = IS_SERVERLESS ? "/tmp/udyamai" : path.join(process.cwd(), ".data");
-const PIPELINE_FILE = path.join(DATA_DIR, "pipeline.json");
+const DATA_DIR = RUNTIME_DATA_DIR;
+const PIPELINE_FILE = runtimeFile("pipeline.json");
 
 export type LoanPurpose = "working_capital" | "term_loan" | "invoice_finance" | "equipment";
 

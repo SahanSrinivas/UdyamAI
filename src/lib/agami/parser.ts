@@ -1,5 +1,8 @@
 /**
- * Bank statement description parser · mirrors scripts/ingest_agami.py
+ * Bank statement description parser.
+ *
+ * Runs at fixture-load time in src/lib/agami/dataset.ts — every transaction in
+ * the bundled corpus is parsed through this once per container instance.
  *
  * Sample inputs:
  *   "NEFT Cr-784950453790-ICIC0SF0002-CONSTRUCTION SOLUTIONS LTD--"

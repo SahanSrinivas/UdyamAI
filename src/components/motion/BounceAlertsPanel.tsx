@@ -35,7 +35,7 @@ export function BounceAlertsPanel({ alerts }: { alerts: BounceAlert[] }) {
             <Radio className="h-3 w-3 animate-pulse" /> Live feed
           </div>
           <div className="mt-1 font-mono text-[11px] text-black/60">
-            agami_transactions · failed=TRUE
+            transactions · failed=true
           </div>
         </div>
       </motion.div>

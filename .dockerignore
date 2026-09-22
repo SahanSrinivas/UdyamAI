@@ -1,0 +1,22 @@
+node_modules
+.next
+.git
+.gitignore
+.data
+.env
+.env.local
+.env.production
+npm-debug.log*
+Dockerfile
+.dockerignore
+.gcloudignore
+
+# Docs, deck artefacts and screenshots are not part of the running app
+*.md
+!README.md
+*.pptx
+deck-screenshots
+docs
+__pycache__
+*.pyc
+tsconfig.tsbuildinfo

@@ -86,7 +86,7 @@ export function ItrVerifiedChip({
       </div>
 
       <div className="mt-3 text-[10px] text-black/50">
-        Data source · AgamiAI Indian-Income-Tax-Returns (200-row open dataset, Apache 2.0)
+        Data source · AgamiAI Indian-Income-Tax-Returns (100 filings, open dataset, Apache 2.0)
       </div>
     </motion.div>
   );

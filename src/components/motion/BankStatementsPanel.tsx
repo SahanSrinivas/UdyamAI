@@ -163,8 +163,8 @@ export function BankStatementsPanel({ summary }: { summary: StatementSummary }) 
 
       <motion.div variants={fadeUp} className="mt-4 rounded-xl border border-black/10 bg-white/80 p-3 text-[11px] text-black/60">
         <span className="font-semibold text-black">Data source:</span> AgamiAI Indian-Bank-Statements
-        (open dataset, Apache 2.0) · loaded into AWS RDS Aurora Postgres 18 · queried live at page
-        render.
+        (open dataset, Apache 2.0) · 200 accounts and 32,349 transactions bundled into the Cloud Run
+        image · aggregated in-process at page render.
       </motion.div>
     </motion.section>
   );

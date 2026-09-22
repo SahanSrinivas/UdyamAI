@@ -1,17 +1,30 @@
 /**
- * LR retraining on real AgamiAI transaction distribution.
+ * LR retraining on the real AgamiAI transaction distribution.
  *
- * Reads real bank-statement data (aggregate per account) from Postgres,
- * derives features, runs batch-GD logistic regression per lender, and
- * persists the trained weights to lr_training_runs.
+ * Reads per-account aggregates from the bundled corpus, derives features, runs
+ * batch-GD logistic regression per lender, and persists the trained weights.
  *
- * The synthetic labeler mirrors published underwriting preferences per
- * lender (SBI heavy on compliance, HDFC on growth+vintage, IDBI on revenue
+ * Two things changed when RDS was removed:
+ *
+ *   1. Feature extraction is the same aggregation it always was — grouped by
+ *      account, one pass over 32k transactions — just expressed in TypeScript
+ *      rather than SQL.
+ *   2. `lr_training_runs` is now a JSON file in the container's writable
+ *      scratch (see src/lib/runtimeStore.ts). Runs survive within an instance
+ *      and are lost when it recycles, at which point the next read retrains
+ *      from the corpus. The badge therefore always has something real to show,
+ *      and no instance ever serves a number it did not compute.
+ *
+ * The synthetic labeler mirrors published underwriting preferences per lender
+ * (SBI heavy on compliance, HDFC on growth+vintage, IDBI on revenue
  * stability). Same shape as src/lib/mlModel.ts synthetic sampler — but
- * features come from real distributions.
+ * features come from real distributions, and the label noise is drawn from a
+ * seeded PRNG so a given corpus always produces the same accuracy and AUC.
  */
 
-import { getPool, query } from "./db";
+import { promises as fs } from "fs";
+import { getDataset } from "./dataset";
+import { RUNTIME_DATA_DIR, runtimeFile } from "../runtimeStore";
 
 export type Features = [number, number, number, number, number, number];
 export type LabeledSample = { features: Features; label: number };
@@ -22,55 +35,73 @@ const LABEL_HEURISTICS = {
   "HDFC Bank": { wRev: 2.6, wComp: 2.2, wCtr: 2.0, wGro: 2.4, wAmt: -1.6, wTen: -0.2, bias: -3.0 },
 } as const;
 
+export type Lender = keyof typeof LABEL_HEURISTICS;
+export const LENDERS: Lender[] = ["IDBI Bank", "SBI", "HDFC Bank"];
+
+const FEATURE_NAMES = [
+  "bias", "revenue", "compliance", "counterparty", "growth", "amountRatio", "tenor",
+];
+
+const RUNS_FILE = runtimeFile("retrain.json");
+const MAX_RUNS = 200;
+
 const sigmoid = (z: number) => 1 / (1 + Math.exp(-z));
 
-/** Extract per-account training rows from Postgres. */
-export async function extractTrainingRows(): Promise<Array<{ features: Features }>> {
-  const rows = await query<{
-    account_id: string;
-    n_txns: string; avg_credit: string; avg_debit: string;
-    n_upi: string; n_bounces: string;
-    top_cp_share: string; cp_count: string;
-    opening: string; closing: string;
-  }>(
-    `WITH per_acc AS (
-       SELECT t.account_id,
-              COUNT(*)::bigint AS n_txns,
-              AVG(COALESCE(t.credit, 0))::double precision AS avg_credit,
-              AVG(COALESCE(t.debit, 0))::double precision AS avg_debit,
-              SUM(CASE WHEN t.txn_type = 'UPI' THEN 1 ELSE 0 END)::bigint AS n_upi,
-              SUM(CASE WHEN t.failed THEN 1 ELSE 0 END)::bigint AS n_bounces,
-              COUNT(DISTINCT t.counterparty) FILTER (WHERE t.counterparty IS NOT NULL)::bigint AS cp_count
-         FROM agami_transactions t
-        GROUP BY t.account_id
-     ),
-     top_cp AS (
-       SELECT account_id, MAX(inflow) AS top_inflow, SUM(inflow) AS total_inflow FROM (
-         SELECT account_id, counterparty, SUM(credit) AS inflow
-           FROM agami_transactions
-          WHERE counterparty IS NOT NULL
-          GROUP BY account_id, counterparty
-       ) x
-       GROUP BY account_id
-     )
-     SELECT p.account_id, p.n_txns, p.avg_credit, p.avg_debit, p.n_upi, p.n_bounces,
-            p.cp_count,
-            CASE WHEN t.total_inflow > 0 THEN t.top_inflow / t.total_inflow ELSE 0 END AS top_cp_share,
-            a.opening_balance AS opening, a.closing_balance AS closing
-       FROM per_acc p
-       LEFT JOIN top_cp t ON t.account_id = p.account_id
-       JOIN agami_accounts a ON a.account_id = p.account_id`
-  );
+/** mulberry32 — small, fast, and reproducible, which Math.random is not. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
+function seedFor(lender: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < lender.length; i++) {
+    h ^= lender.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return h;
+}
+
+/**
+ * Extract per-account training rows from the bundled corpus.
+ *
+ * The SQL this replaces was a CTE pair: per-account aggregates joined to each
+ * account's largest counterparty by inflow. Same two passes here.
+ */
+export async function extractTrainingRows(): Promise<Array<{ features: Features }>> {
+  const { accounts, txnsByAccount } = getDataset();
   const samples: Array<{ features: Features }> = [];
-  for (const r of rows) {
-    const avgCredit = Number(r.avg_credit);
-    const avgDebit = Number(r.avg_debit);
-    const nBounces = Number(r.n_bounces);
-    const cpCount = Number(r.cp_count);
-    const topCpShare = Number(r.top_cp_share) || 0;
-    const opening = Math.max(1, Number(r.opening));
-    const closing = Number(r.closing);
+
+  for (const account of accounts) {
+    const txns = txnsByAccount.get(account.accountId) ?? [];
+    if (txns.length === 0) continue;
+
+    let sumCredit = 0;
+    let sumDebit = 0;
+    let nBounces = 0;
+    const inflowByCp = new Map<string, number>();
+
+    for (const t of txns) {
+      sumCredit += t.credit;
+      sumDebit += t.debit;
+      if (t.failed) nBounces++;
+      const cp = t.parsed.counterparty;
+      if (cp) inflowByCp.set(cp, (inflowByCp.get(cp) ?? 0) + t.credit);
+    }
+
+    const avgCredit = sumCredit / txns.length;
+    const avgDebit = sumDebit / txns.length;
+    const cpCount = inflowByCp.size;
+    const inflows = [...inflowByCp.values()];
+    const totalInflow = inflows.reduce((a, b) => a + b, 0);
+    const topCpShare = totalInflow > 0 ? Math.max(...inflows) / totalInflow : 0;
+    const opening = Math.max(1, account.openingBalance);
+    const closing = account.closingBalance;
 
     const revenue = Math.min(1, avgCredit / 1_000_000);
     const compliance = Math.max(0, 1 - nBounces * 0.15);
@@ -83,22 +114,24 @@ export async function extractTrainingRows(): Promise<Array<{ features: Features 
       features: [revenue, compliance, counterparty, growth, amountRatio, tenorNorm],
     });
   }
+
   return samples;
 }
 
-function labelFor(lender: keyof typeof LABEL_HEURISTICS, f: Features, noise: number): number {
+function labelFor(lender: Lender, f: Features, noise: number, rand: () => number): number {
   const h = LABEL_HEURISTICS[lender];
   const linear = h.bias + h.wRev * f[0] + h.wComp * f[1] + h.wCtr * f[2] +
                  h.wGro * f[3] + h.wAmt * f[4] + h.wTen * f[5];
-  return Math.random() < sigmoid(linear + noise) ? 1 : 0;
+  return rand() < sigmoid(linear + noise) ? 1 : 0;
 }
 
-export function trainLR(lender: keyof typeof LABEL_HEURISTICS,
-                       samples: Array<{ features: Features }>,
-                       epochs = 300, lr = 0.4) {
+export function trainLR(lender: Lender,
+                        samples: Array<{ features: Features }>,
+                        epochs = 300, lr = 0.4) {
+  const rand = seededRandom(seedFor(lender));
   const labeled: LabeledSample[] = samples.map((s) => ({
     features: s.features,
-    label: labelFor(lender, s.features, (Math.random() - 0.5) * 0.6),
+    label: labelFor(lender, s.features, (rand() - 0.5) * 0.6, rand),
   }));
 
   let w = [0, 0, 0, 0, 0, 0, 0];
@@ -143,49 +176,83 @@ export function trainLR(lender: keyof typeof LABEL_HEURISTICS,
   };
 }
 
+// ─── Run history ────────────────────────────────────────────────
+
+export type RetrainRun = {
+  lender: string;
+  started_at: string;
+  sample_count: number;
+  epochs: number;
+  accuracy: number;
+  auc: number;
+  weights: number[];
+  feature_names: string[];
+};
+
+async function readRuns(): Promise<RetrainRun[]> {
+  try {
+    return JSON.parse(await fs.readFile(RUNS_FILE, "utf-8")) as RetrainRun[];
+  } catch {
+    return [];
+  }
+}
+
+async function writeRuns(runs: RetrainRun[]) {
+  await fs.mkdir(RUNTIME_DATA_DIR, { recursive: true });
+  await fs.writeFile(RUNS_FILE, JSON.stringify(runs.slice(0, MAX_RUNS), null, 2), "utf-8");
+}
+
 export async function persistTrainingRun(
   lender: string, weights: number[],
   accuracy: number, auc: number,
   sampleCount: number, epochsRun: number
-) {
-  const pool = getPool();
-  if (!pool) return;
-  await pool.query(
-    `INSERT INTO lr_training_runs
-       (lender, sample_count, epochs, accuracy, auc, weights, feature_names)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [lender, sampleCount, epochsRun, accuracy, auc, JSON.stringify(weights),
-      ["bias", "revenue", "compliance", "counterparty", "growth", "amountRatio", "tenor"]]
-  );
+): Promise<RetrainRun> {
+  const run: RetrainRun = {
+    lender,
+    started_at: new Date().toISOString(),
+    sample_count: sampleCount,
+    epochs: epochsRun,
+    accuracy,
+    auc,
+    weights,
+    feature_names: FEATURE_NAMES,
+  };
+  const runs = await readRuns();
+  runs.unshift(run);
+  await writeRuns(runs);
+  return run;
 }
 
-export type RetrainRun = {
-  lender: string; started_at: string; sample_count: number; epochs: number;
-  accuracy: number; auc: number; weights: number[];
-};
+/** Train every lender once and persist the result. Used by /api/retrain. */
+export async function retrainAll(): Promise<RetrainRun[]> {
+  const samples = await extractTrainingRows();
+  if (samples.length === 0) return [];
 
+  const fresh: RetrainRun[] = [];
+  for (const lender of LENDERS) {
+    const run = trainLR(lender, samples);
+    fresh.push(await persistTrainingRun(lender, run.weights, run.accuracy, run.auc,
+                                        run.sampleCount, run.epochsRun));
+  }
+  return fresh;
+}
+
+/**
+ * Latest run per lender. A cold instance has no history, so it trains one —
+ * 200 samples × 300 epochs is a few milliseconds, and it means the dashboard
+ * never renders a retrain badge backed by nothing.
+ */
 export async function getLatestRuns(): Promise<RetrainRun[]> {
-  const rows = await query<{
-    lender: string; started_at: Date; sample_count: number; epochs: number;
-    accuracy: number; auc: number; weights: string;
-  }>(
-    `WITH latest AS (
-       SELECT lender, MAX(started_at) AS last_run
-         FROM lr_training_runs
-        GROUP BY lender
-     )
-     SELECT r.lender, r.started_at, r.sample_count, r.epochs, r.accuracy, r.auc, r.weights
-       FROM lr_training_runs r
-       JOIN latest l ON l.lender = r.lender AND l.last_run = r.started_at
-      ORDER BY r.lender`
-  );
-  return rows.map((r) => ({
-    lender: r.lender,
-    started_at: new Date(r.started_at).toISOString(),
-    sample_count: Number(r.sample_count),
-    epochs: Number(r.epochs),
-    accuracy: Number(r.accuracy),
-    auc: Number(r.auc),
-    weights: typeof r.weights === "string" ? JSON.parse(r.weights) : r.weights,
-  }));
+  let runs = await readRuns();
+  if (runs.length === 0) {
+    await retrainAll();
+    runs = await readRuns();
+  }
+
+  const latest = new Map<string, RetrainRun>();
+  for (const run of runs) {
+    const seen = latest.get(run.lender);
+    if (!seen || run.started_at > seen.started_at) latest.set(run.lender, run);
+  }
+  return [...latest.values()].sort((a, b) => a.lender.localeCompare(b.lender));
 }

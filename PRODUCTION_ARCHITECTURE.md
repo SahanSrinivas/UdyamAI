@@ -1,5 +1,10 @@
 # UdyamAI — Production Architecture
 
+> **Status:** superseded by `ARCHITECTURE.md`, which is the canonical architecture document
+> and reflects what actually ships on Cloud Run. This file is an earlier long-term
+> exploration, kept for the tier-by-tier detail it carries. Where the two disagree,
+> `ARCHITECTURE.md` wins.
+
 The Next.js app in this repo is the **prototype** for IDBI Innovate. What follows is the production build we'd ship post-selection. Every choice below is optimized for the specific constraints of Indian regulated fintech: RBI data residency, DPDP Act compliance, RBI IT Framework, and lender-side integrations.
 
 ---

@@ -34,16 +34,17 @@ export function ArchitectureTabs() {
           The stack IDBI can deploy.
         </h1>
         <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-black/70">
-          Everything below runs on AWS in ap-south-1 (Mumbai). Auditable, scalable, RBI-compliant.
-          The prototype is Next.js on Amplify; the production build swaps in Django, RDS Postgres,
-          DocumentDB, Bedrock, and Fargate — same UI, same code, real rails.
+          Everything below runs on Google Cloud in asia-south1 (Mumbai). Auditable, scalable,
+          RBI-compliant. The prototype is Next.js on Cloud Run with no database at all; the
+          production build swaps in Django, Cloud SQL, Firestore, and Vertex AI — same UI, same
+          code, same container, real rails.
         </p>
 
         {/* KPI strip */}
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "AWS services", value: "25+" },
-            { label: "Region", value: "ap-south-1" },
+            { label: "Google Cloud services", value: "20+" },
+            { label: "Region", value: "asia-south1" },
             { label: "SLA target", value: "99.95%" },
             { label: "Cost @ 100k MAU", value: "₹4.8L / mo" },
           ].map((s) => (
@@ -113,9 +114,9 @@ export function ArchitectureTabs() {
 function OverviewTab({ onNav }: { onNav: (k: TabKey) => void }) {
   const tiers = [
     { name: "Client", key: "client" as TabKey, services: ["iOS SwiftUI", "Android Kotlin", "Web PWA", "WhatsApp Bot"], accent: "#CCFF5E" },
-    { name: "Edge · API", key: "api" as TabKey, services: ["CloudFront", "API Gateway", "Fargate · Django"], accent: "#3b82f6" },
-    { name: "AI · ML", key: "ai" as TabKey, services: ["Bedrock (Claude)", "SageMaker", "Custom LR"], accent: "#22c55e" },
-    { name: "Data", key: "data" as TabKey, services: ["RDS Postgres", "DocumentDB", "ElastiCache", "S3"], accent: "#f59e0b" },
+    { name: "Edge · API", key: "api" as TabKey, services: ["Cloud CDN", "Cloud Armor", "Cloud Run · Django"], accent: "#3b82f6" },
+    { name: "AI · ML", key: "ai" as TabKey, services: ["Vertex AI (Gemini)", "Vertex Training", "Custom LR"], accent: "#22c55e" },
+    { name: "Data", key: "data" as TabKey, services: ["Cloud SQL", "Firestore", "Memorystore", "Cloud Storage"], accent: "#f59e0b" },
     { name: "Rails", key: "rails" as TabKey, services: ["Account Aggregator", "ULI · RBIH", "OCEN 4.0"], accent: "#a855f7" },
   ];
   return (
@@ -156,7 +157,7 @@ function ClientTab() {
   const rows: [string, string, string][] = [
     ["Mobile · iOS", "SwiftUI + Combine + Swift Concurrency", "Native performance for animations · Aadhaar SDK on native"],
     ["Mobile · Android", "Kotlin + Jetpack Compose + Coroutines", "Vernacular text rendering (HI/TE/TA) is best native"],
-    ["Web PWA", "Next.js 14 + Tailwind + framer-motion", "This repo · desktop-first · Vercel/Amplify Edge"],
+    ["Web PWA", "Next.js 14 + Tailwind + framer-motion", "This repo · desktop-first · Cloud Run behind Cloud CDN"],
     ["Alt · Single codebase", "React Native + Expo", "One codebase covers both mobile OS if team is 1 person"],
     ["Distribution · SDK", "Embedded SDK for Khatabook / OkCredit / Vyapar", "30M+ MSMEs already there — embed rather than acquire"],
     ["WhatsApp Bot", "Gupshup WhatsApp Business API", "78% of India prefers this · production onboarding rail"],
@@ -172,20 +173,20 @@ function ApiTab() {
     ["Auth", "django-allauth + Firebase Auth + OTP", "MFA · SSO for lenders (Okta/Azure AD)"],
     ["Aadhaar KYC", "Digio / Signzy SDK", "Regulator-approved eKYC · ~₹15 / verification"],
     ["Rate limit", "django-ratelimit + Cloud Armor", "Protect GSTIN + score endpoints"],
-    ["API Gateway", "AWS API Gateway", "Global endpoint · throttle · WAF integration"],
+    ["Ingress", "Global External Load Balancer", "Single anycast endpoint · managed TLS · Cloud Armor in front"],
   ];
   return <TableCard title="API tier · Django-first" subtitle="Where the real work happens" rows={rows} accent="#3b82f6" />;
 }
 
 function AiTab() {
   const rows: [string, string, string][] = [
-    ["LLM · vernacular", "AWS Bedrock (Claude 3.5)", "Enterprise SLA · ap-south-1 residency · audit logs"],
-    ["LLM fallback", "Gemini 1.5 Flash", "Hackathon-speed · already wired in this prototype"],
-    ["Score classifier", "Per-lender logistic regression", "Weekly retrain · scikit-learn on SageMaker"],
-    ["Cash-flow forecast", "Vertex-style AutoML · LSTM under the hood", "90-day liquidity projection · fed into repayment capacity"],
-    ["UPI graph analysis", "Neo4j Aura or Neptune", "Counterparty concentration · circular-payment-ring detection"],
-    ["Fraud detection", "Embedding search on GSTR-1 invoice text", "Circular billing rings via cosine similarity"],
-    ["Model registry", "SageMaker Model Registry", "Every retrain versioned · model cards auto-generated"],
+    ["LLM · vernacular", "Vertex AI · Gemini on asia-south1", "Enterprise SLA · in-region prompts · Cloud Audit Logs per call"],
+    ["LLM · prototype", "Gemini API (AI Studio key)", "Already wired in this repo · same model family, one env var to switch"],
+    ["Score classifier", "Per-lender logistic regression", "Weekly retrain · scikit-learn on Vertex AI Training"],
+    ["Cash-flow forecast", "Vertex AI AutoML · LSTM under the hood", "90-day liquidity projection · fed into repayment capacity"],
+    ["UPI graph analysis", "Neo4j Aura on Google Cloud", "Counterparty concentration · circular-payment-ring detection"],
+    ["Fraud detection", "Vertex AI embeddings on GSTR-1 invoice text", "Circular billing rings via cosine similarity"],
+    ["Model registry", "Vertex AI Model Registry", "Every retrain versioned · model cards auto-generated"],
   ];
   return (
     <div className="space-y-6">
@@ -201,14 +202,15 @@ function AiTab() {
 
 function DataTab() {
   const rows: [string, string, string][] = [
-    ["MongoDB Atlas", "M30 → M60 as we scale", "Score history · event stream · UPI graphs (document-shaped)"],
-    ["Cloud SQL Postgres", "HA · PITR enabled", "Users · KYC · loan applications · OCEN txn log · AA consent artifacts"],
+    ["Prototype · today", "No database · bundled AgamiAI corpus", "3.7 MB of open data read from the container image · scales to zero"],
+    ["Cloud SQL Postgres", "HA · PITR enabled · private IP", "Users · KYC · loan applications · OCEN txn log · AA consent artifacts"],
+    ["Firestore", "Native mode · asia-south1", "Score history · event stream · UPI graphs (document-shaped)"],
     ["Memorystore Redis", "Standard tier", "Celery broker · session cache · rate-limit counters"],
     ["BigQuery", "On-demand pricing", "ML training warehouse · cohort analytics · sector benchmarks"],
-    ["Cloud Storage", "ap-south-1 · CMEK-encrypted", "Consent PDFs · KYC docs · e-signed loan agreements"],
-    ["Backup", "Cross-region to ap-northeast-1", "RPO 15 min · RTO 4 hours"],
+    ["Cloud Storage", "asia-south1 · CMEK-encrypted", "Consent PDFs · KYC docs · e-signed loan agreements"],
+    ["Backup", "Dual-region asia-south1 + asia-south2", "Both regions are in India — residency holds through DR · RPO 15 min · RTO 4 hours"],
   ];
-  return <TableCard title="Data tier" subtitle="Two-database split — transactional vs document" rows={rows} accent="#f59e0b" />;
+  return <TableCard title="Data tier" subtitle="None today — transactional plus document when it is real" rows={rows} accent="#f59e0b" />;
 }
 
 function RailsTab() {
@@ -259,34 +261,34 @@ function RailsTab() {
 
 function DeployTab() {
   const rows: [string, string, string][] = [
-    ["Django API", "AWS Fargate · 2–100 auto-scale", "Container image built via CodeBuild"],
-    ["Score serving", "AWS Fargate · separate service", "Isolated · low-latency · warmed pool"],
-    ["LR training", "SageMaker Custom Training", "Weekly · reads BigQuery outcome data"],
-    ["Static + PWA", "AWS Amplify · Vercel Edge", "Next.js prototype auto-deploys on push"],
-    ["Postgres", "AWS RDS PostgreSQL 15 · Multi-AZ", "ap-south-1 · PITR · CMEK"],
-    ["MongoDB", "MongoDB Atlas M30", "VPC-peered to AWS"],
-    ["Redis", "AWS ElastiCache Redis", "Standard tier"],
-    ["Object storage", "AWS S3", "Signed URLs for KYC docs"],
-    ["CDN", "AWS CloudFront", "Global edge cache"],
-    ["Secrets", "AWS Secrets Manager", "API keys · mTLS certs · Aadhaar keys"],
-    ["CI/CD", "CodePipeline + CodeBuild", "Blue-green deploy · rollback in seconds"],
-    ["Monitoring", "CloudWatch + Sentry (+ Datadog)", "30d log retention · p99 latency alerts"],
-    ["WAF", "AWS WAF + Shield", "Protects public endpoints"],
-    ["DNS", "Route 53", "udyamai.credit · udyamai.in"],
+    ["This prototype", "Cloud Run · one container · scales to zero", "Next.js standalone image · no VPC, no database, no connector"],
+    ["Django API", "Cloud Run · 1–100 auto-scale", "Same deploy shape as the prototype · image built by Cloud Build"],
+    ["Score serving", "Cloud Run · separate service", "Isolated · low-latency · min-instances 1 to remove cold starts"],
+    ["LR training", "Cloud Run Jobs + Cloud Scheduler", "Weekly · reads BigQuery outcome data · off the public surface"],
+    ["Postgres", "Cloud SQL PostgreSQL 16 · HA", "asia-south1 · private IP · PITR · CMEK"],
+    ["Documents", "Firestore Native mode", "Score history · event stream"],
+    ["Redis", "Memorystore for Redis", "Standard tier · private services access"],
+    ["Object storage", "Cloud Storage", "Signed URLs for KYC docs"],
+    ["CDN", "Cloud CDN on the global load balancer", "Edge cache · managed TLS · one anycast IP"],
+    ["Secrets", "Secret Manager", "API keys · mTLS certs · Aadhaar keys · mounted into Cloud Run"],
+    ["CI/CD", "Cloud Build → Artifact Registry", "Gradual rollout by revision · rollback is one traffic split"],
+    ["Monitoring", "Cloud Logging + Cloud Monitoring (+ Sentry)", "30d log retention · p99 latency alerts · error reporting"],
+    ["WAF", "Cloud Armor", "Protects public endpoints · OWASP preconfigured rules"],
+    ["DNS", "Cloud DNS", "udyamai.credit · udyamai.in"],
   ];
-  return <TableCard title="Deploy · AWS for IDBI" subtitle="Everything runs on AWS in ap-south-1" rows={rows} accent="#CCFF5E" />;
+  return <TableCard title="Deploy · Google Cloud for IDBI" subtitle="Everything runs on Google Cloud in asia-south1" rows={rows} accent="#CCFF5E" />;
 }
 
 function ComplianceTab() {
   const rows: [string, string, string][] = [
-    ["RBI IT Framework (2023)", "Data residency in ap-south-1 · CMEK · audit log per decision", "Non-negotiable"],
+    ["RBI IT Framework (2023)", "Data residency in asia-south1 · CMEK · audit log per decision", "Non-negotiable"],
     ["DPDP Act 2023", "Consent lifecycle via AA · deletion within 72h · PII vault separated", "Non-negotiable"],
     ["RBI Digital Lending Guidelines", "LSP model — bank owns customer funds · money never touches us", "Regulatory alignment"],
     ["Sahamati Rulebook", "ReBIT-compliant AA calls · signed responses · complete consent trail", "Ecosystem membership"],
     ["SOC 2 Type II", "Target: 12 months · Vanta or Drata for automation", "Enterprise sales requirement"],
     ["ISO 27001", "Target: 18 months", "International expansion enabler"],
     ["Model risk · RBI PRISM", "Only interpretable LR in credit decisions", "Regulator can audit every point"],
-    ["Business continuity", "Cross-region backup nightly · RPO 15m · RTO 4h", "Bank BCP requirement"],
+    ["Business continuity", "Nightly backup to asia-south2 (Delhi) · RPO 15m · RTO 4h", "Bank BCP requirement · stays in India"],
   ];
   return <TableCard title="Compliance stack" subtitle="Everything a bank's CISO will ask for" rows={rows} accent="#f43f5e" />;
 }

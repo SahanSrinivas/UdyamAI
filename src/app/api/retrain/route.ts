@@ -1,44 +1,40 @@
 import { NextResponse } from "next/server";
-import { extractTrainingRows, trainLR, persistTrainingRun } from "@/lib/agami/lrRetrain";
+import { retrainAll } from "@/lib/agami/lrRetrain";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
- * Retrain LR calibrator on real Postgres data.
+ * Retrain the LR calibrator on the bundled AgamiAI corpus.
  * GET · POST both work — one-shot job, no auth for demo.
+ *
+ * Results land in this instance's writable scratch, so a retrain is visible to
+ * whichever container served it. Production moves this behind Cloud Scheduler
+ * → Cloud Run Jobs and writes the runs to a real store.
  */
 async function runRetrain() {
   const started = Date.now();
-  const samples = await extractTrainingRows();
-  if (samples.length === 0) {
+  const runs = await retrainAll();
+
+  if (runs.length === 0) {
     return NextResponse.json({
-      status: "no data · agami_transactions is empty",
+      status: "no data · the bundled AgamiAI corpus is empty (run `npm run data:build`)",
       elapsedMs: Date.now() - started,
     }, { status: 200 });
-  }
-
-  const lenders: Array<"IDBI Bank" | "SBI" | "HDFC Bank"> = ["IDBI Bank", "SBI", "HDFC Bank"];
-  const results = [];
-  for (const lender of lenders) {
-    const run = trainLR(lender, samples);
-    await persistTrainingRun(lender, run.weights, run.accuracy, run.auc,
-                              run.sampleCount, run.epochsRun);
-    results.push({
-      lender,
-      accuracy: run.accuracy,
-      auc: run.auc,
-      sampleCount: run.sampleCount,
-      weights: run.weights,
-    });
   }
 
   return NextResponse.json({
     status: "ok",
     elapsedMs: Date.now() - started,
-    samples: samples.length,
-    runs: results,
+    samples: runs[0].sample_count,
+    runs: runs.map((r) => ({
+      lender: r.lender,
+      accuracy: r.accuracy,
+      auc: r.auc,
+      sampleCount: r.sample_count,
+      weights: r.weights,
+    })),
   });
 }
 
