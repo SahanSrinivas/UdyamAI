@@ -80,7 +80,7 @@ export function validateGstin(input: string): GstinValidation {
   return { ok: true, gstin, state, pan: gstin.slice(2, 12) };
 }
 
-function hash32(s: string): number {
+export function hash32(s: string): number {
   let h = 2166136261 >>> 0;
   for (let i = 0; i < s.length; i++) {
     h ^= s.charCodeAt(i);
@@ -89,7 +89,7 @@ function hash32(s: string): number {
   return h >>> 0;
 }
 
-function seededRand(seed: number) {
+export function seededRand(seed: number) {
   let state = seed || 1;
   return () => {
     state = (state * 1664525 + 1013904223) >>> 0;

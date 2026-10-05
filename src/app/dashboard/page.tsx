@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, Landmark, FileText, Users, RefreshCw } from "lucide-react";
 import { getProfile, MSMEProfile } from "@/lib/mockData";
-import { computeHealthCard } from "@/lib/scoreEngine";
+import { computeHealthCard, extractFactors } from "@/lib/scoreEngine";
+import { buildOsintReport } from "@/lib/osint";
 import { explainScore, Language } from "@/lib/gemini";
 import { validateGstin, generateSyntheticProfile } from "@/lib/gstin";
 import { getMarketSnapshot } from "@/lib/marketData";
@@ -22,6 +23,8 @@ import { AlternativeSignals } from "@/components/motion/AlternativeSignals";
 import { ItrVerifiedChip } from "@/components/motion/ItrVerifiedChip";
 import { BankStatementsPanel } from "@/components/motion/BankStatementsPanel";
 import { RetrainBadge } from "@/components/motion/RetrainBadge";
+import { ScoreSimulator } from "@/components/motion/ScoreSimulator";
+import { AiAgentButton } from "@/components/motion/AiAgentDrawer";
 import { getSectorSignals } from "@/lib/sectorSignals";
 import { getItrForGstin, itrSignalImpact } from "@/lib/agami/itrData";
 import { getStatementForGstin } from "@/lib/agami/statements";
@@ -57,6 +60,8 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
   const itr = await getItrForGstin(profile.gstin);
   const itrImpact = itr ? itrSignalImpact(itr) : null;
   const statement = await getStatementForGstin(profile.gstin).catch(() => null);
+  const factors = extractFactors(profile);
+  const osint = buildOsintReport(profile);
 
   return (
     <main className="min-h-screen bg-black">
@@ -101,6 +106,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
                 {profile.sector} · {profile.vintageYears} years in business · {PROFILE_TYPE_LABEL[profile.profileType]}
               </div>
             </div>
+            <AiAgentButton tradeName={profile.tradeName} report={osint} />
           </div>
 
           <div className="mt-10 grid gap-6 lg:grid-cols-[380px_1fr]">
@@ -118,6 +124,25 @@ export default async function Dashboard({ searchParams }: { searchParams: Search
               <SectorCohort profile={profile} />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Score simulator — sand */}
+      <section className="bg-sand-fade">
+        <div className="mx-auto max-w-[1600px] px-6 py-16">
+          <div className="mb-8">
+            <div className="text-[13px] font-semibold uppercase tracking-[0.18em] text-black/60">
+              How the score is calculated
+            </div>
+            <h2 className="mt-2 font-serif text-[42px] leading-[0.98] tracking-serif text-black sm:text-[52px]">
+              Move a factor. Watch the score.
+            </h2>
+            <p className="mt-3 max-w-2xl text-[15px] text-black/65">
+              Each factor is normalised to 0–100% from the underlying GST, bank and EPFO data. Sliders start at this
+              MSME&apos;s actual values (tick marks); drag them to see how every point of the score is earned.
+            </p>
+          </div>
+          <ScoreSimulator actual={factors} />
         </div>
       </section>
 

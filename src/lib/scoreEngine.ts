@@ -60,44 +60,162 @@ function trend(xs: number[]) {
   return (last - first) / first;
 }
 
-function revenueStabilityScore(p: MSMEProfile): number {
+// ── Factors ──────────────────────────────────────────────────────────────
+// Every sub-score is a weighted blend of normalised factors in [0, 1].
+// `extractFactors` reads them off a profile; `scoreFromFactors` turns them
+// into sub-scores. The dashboard simulator drives the same function with
+// slider values, so what the demo shows is exactly what the engine computes.
+
+export type FactorKey =
+  | "revenueStability"
+  | "revenueGrowth"
+  | "gstOnTime"
+  | "filingTimeliness"
+  | "epfoCoverage"
+  | "buyerDiversification"
+  | "buyerBase"
+  | "supplierBase"
+  | "upiGrowth"
+  | "cashBuffer"
+  | "bounceFree";
+
+export type Factors = Record<FactorKey, number>;
+
+export type SubScoreKey = "revenue" | "compliance" | "counterparty" | "growth";
+
+export type FactorDef = {
+  key: FactorKey;
+  label: string;
+  source: string;
+  /** How 0% and 100% read in plain terms. */
+  scale: [string, string];
+};
+
+export const FACTOR_DEFS: FactorDef[] = [
+  { key: "revenueStability", label: "Revenue stability", source: "GSTR-1 · 12 months", scale: ["Swings ≥40% month to month", "Flat, predictable revenue"] },
+  { key: "revenueGrowth", label: "Revenue growth", source: "GSTR-1 · H1 vs H2", scale: ["−30% decline", "+80% growth"] },
+  { key: "gstOnTime", label: "GST filed on time", source: "GSTN · 24 returns", scale: ["0 of 24 on time", "24 of 24 on time"] },
+  { key: "filingTimeliness", label: "Filing lag", source: "GSTN · avg delay", scale: ["20+ days late", "Filed by due date"] },
+  { key: "epfoCoverage", label: "EPFO coverage", source: "EPFO · ECR", scale: ["Not enrolled", "Contributions verified"] },
+  { key: "buyerDiversification", label: "Buyer diversification", source: "GSTR-1 · top buyer share", scale: ["One buyer = 100% revenue", "No dominant buyer"] },
+  { key: "buyerBase", label: "Buyer count", source: "GSTR-1 · unique buyers", scale: ["0 buyers", "40+ buyers"] },
+  { key: "supplierBase", label: "Supplier base", source: "GSTR-2B · unique suppliers", scale: ["0 suppliers", "15+ suppliers"] },
+  { key: "upiGrowth", label: "UPI inflow growth", source: "AA · bank statement", scale: ["−30% decline", "+80% growth"] },
+  { key: "cashBuffer", label: "Cash buffer", source: "AA · avg CA balance", scale: ["No buffer", "1.5+ months of outflow"] },
+  { key: "bounceFree", label: "Bounce-free record", source: "AA · NACH / cheque returns", scale: ["5+ bounces in 90d", "Zero bounces"] },
+];
+
+export const SUBSCORE_DEFS: {
+  key: SubScoreKey;
+  label: string;
+  weight: number;
+  color: string;
+  summary: string;
+  parts: { factor: FactorKey; weight: number; transform?: (v: number) => number; note?: string }[];
+}[] = [
+  {
+    key: "revenue",
+    label: "Revenue Stability",
+    weight: 0.3,
+    color: "#00b054",
+    summary: "12-month revenue variance and growth trend",
+    parts: [
+      { factor: "revenueStability", weight: 0.65 },
+      // Revenue growth is capped at +60% here (vs +80% in Growth Momentum).
+      { factor: "revenueGrowth", weight: 0.35, transform: (v) => Math.min(1, (v * 1.1) / 0.9), note: "capped at +60%" },
+    ],
+  },
+  {
+    key: "compliance",
+    label: "Compliance",
+    weight: 0.25,
+    color: "#324b7f",
+    summary: "GSTR filings, EPFO status, cheque bounces",
+    parts: [
+      { factor: "gstOnTime", weight: 0.55 },
+      { factor: "filingTimeliness", weight: 0.3 },
+      // Missing EPFO costs 20% of this slice, not all of it.
+      { factor: "epfoCoverage", weight: 0.15, transform: (v) => 0.8 + 0.2 * v, note: "floor 80%" },
+    ],
+  },
+  {
+    key: "counterparty",
+    label: "Counterparty Risk",
+    weight: 0.25,
+    color: "#f5b400",
+    summary: "Buyer / supplier concentration and diversity",
+    parts: [
+      { factor: "buyerDiversification", weight: 0.55 },
+      { factor: "buyerBase", weight: 0.3 },
+      { factor: "supplierBase", weight: 0.15 },
+    ],
+  },
+  {
+    key: "growth",
+    label: "Growth Momentum",
+    weight: 0.2,
+    color: "#5a72a3",
+    summary: "UPI velocity, cash buffer, forward trajectory",
+    parts: [
+      { factor: "revenueGrowth", weight: 0.35 },
+      { factor: "upiGrowth", weight: 0.25 },
+      { factor: "cashBuffer", weight: 0.25 },
+      { factor: "bounceFree", weight: 0.15 },
+    ],
+  },
+];
+
+const unit = (n: number) => Math.max(0, Math.min(1, n));
+// Growth trend normalised over [−30%, +80%].
+const growthUnit = (g: number) => (Math.max(-0.3, Math.min(0.8, g)) + 0.3) / 1.1;
+
+export function extractFactors(p: MSMEProfile): Factors {
   const cv = stdev(p.monthlyRevenue) / (mean(p.monthlyRevenue) || 1);
-  const stability = Math.max(0, 1 - cv * 2.5);
-  const growth = Math.max(-0.3, Math.min(0.6, trend(p.monthlyRevenue)));
-  return clamp(1000 * (0.65 * stability + 0.35 * ((growth + 0.3) / 0.9)));
-}
-
-function complianceScore(p: MSMEProfile): number {
-  const total = p.gstFiledOnTime + p.gstFiledLate;
-  const onTimeRate = total ? p.gstFiledOnTime / total : 0;
-  const lagPenalty = Math.max(0, 1 - p.gstFilingLagDays / 20);
-  const epfoBonus = p.epfoActive ? 1 : 0.8;
-  return clamp(1000 * (0.55 * onTimeRate + 0.3 * lagPenalty + 0.15 * epfoBonus));
-}
-
-function counterpartyRiskScore(p: MSMEProfile): number {
-  const concentration = 1 - p.topBuyerRevenueShare;
-  const diversity = Math.min(1, p.buyerCount / 40);
-  const supplierBase = Math.min(1, p.supplierCount / 15);
-  return clamp(1000 * (0.55 * concentration + 0.3 * diversity + 0.15 * supplierBase));
-}
-
-function growthMomentumScore(p: MSMEProfile): number {
-  const revGrowth = Math.max(-0.3, Math.min(0.8, trend(p.monthlyRevenue)));
-  const upiGrowth = Math.max(-0.3, Math.min(0.8, trend(p.upiInflowMonthly)));
+  const filings = p.gstFiledOnTime + p.gstFiledLate;
   const bufferMonths = p.currentAccountBalanceAvg / (mean(p.upiOutflowMonthly) || 1);
-  const bufferScore = Math.min(1, bufferMonths / 1.5);
-  const bounceHit = Math.max(0, 1 - p.bounceCount90d * 0.2);
-  return clamp(
-    1000 *
-      (0.35 * ((revGrowth + 0.3) / 1.1) +
-        0.25 * ((upiGrowth + 0.3) / 1.1) +
-        0.25 * bufferScore +
-        0.15 * bounceHit)
-  );
+  return {
+    revenueStability: unit(1 - cv * 2.5),
+    revenueGrowth: growthUnit(trend(p.monthlyRevenue)),
+    gstOnTime: filings ? p.gstFiledOnTime / filings : 0,
+    filingTimeliness: unit(1 - p.gstFilingLagDays / 20),
+    epfoCoverage: p.epfoActive ? 1 : 0,
+    buyerDiversification: unit(1 - p.topBuyerRevenueShare),
+    buyerBase: unit(p.buyerCount / 40),
+    supplierBase: unit(p.supplierCount / 15),
+    upiGrowth: growthUnit(trend(p.upiInflowMonthly)),
+    cashBuffer: unit(bufferMonths / 1.5),
+    bounceFree: unit(1 - p.bounceCount90d * 0.2),
+  };
 }
 
-function bandFor(score: number): HealthCard["band"] {
+export type ScoreBreakdown = {
+  overall: number;
+  band: HealthCard["band"];
+  subScores: {
+    key: SubScoreKey;
+    label: string;
+    weight: number;
+    color: string;
+    summary: string;
+    score: number;
+    parts: { factor: FactorKey; weight: number; value: number; points: number; note?: string }[];
+  }[];
+};
+
+export function scoreFromFactors(f: Factors): ScoreBreakdown {
+  const subScores = SUBSCORE_DEFS.map((d) => {
+    const parts = d.parts.map((pt) => {
+      const value = pt.transform ? pt.transform(unit(f[pt.factor])) : unit(f[pt.factor]);
+      return { factor: pt.factor, weight: pt.weight, value, points: 1000 * pt.weight * value, note: pt.note };
+    });
+    const score = Math.round(clamp(sum(parts.map((x) => x.points))));
+    return { key: d.key, label: d.label, weight: d.weight, color: d.color, summary: d.summary, score, parts };
+  });
+  const overall = Math.round(subScores.reduce((acc, s) => acc + s.score * s.weight, 0));
+  return { overall, band: bandFor(overall), subScores };
+}
+
+export function bandFor(score: number): HealthCard["band"] {
   if (score >= 800) return "Excellent";
   if (score >= 650) return "Strong";
   if (score >= 500) return "Fair";
@@ -263,45 +381,17 @@ function narrativeFor(p: MSMEProfile, overall: number, band: HealthCard["band"],
 }
 
 export function computeHealthCard(profile: MSMEProfile): HealthCard {
-  const subScores: SubScore[] = [
-    {
-      key: "revenue",
-      label: "Revenue Stability",
-      score: Math.round(revenueStabilityScore(profile)),
-      weight: 0.3,
-      color: "#00b054",
-      summary: "12-month revenue variance and growth trend",
-    },
-    {
-      key: "compliance",
-      label: "Compliance",
-      score: Math.round(complianceScore(profile)),
-      weight: 0.25,
-      color: "#324b7f",
-      summary: "GSTR filings, EPFO status, cheque bounces",
-    },
-    {
-      key: "counterparty",
-      label: "Counterparty Risk",
-      score: Math.round(counterpartyRiskScore(profile)),
-      weight: 0.25,
-      color: "#f5b400",
-      summary: "Buyer / supplier concentration and diversity",
-    },
-    {
-      key: "growth",
-      label: "Growth Momentum",
-      score: Math.round(growthMomentumScore(profile)),
-      weight: 0.2,
-      color: "#5a72a3",
-      summary: "UPI velocity, cash buffer, forward trajectory",
-    },
-  ];
+  const breakdown = scoreFromFactors(extractFactors(profile));
+  const subScores: SubScore[] = breakdown.subScores.map(({ key, label, score, weight, color, summary }) => ({
+    key,
+    label,
+    score,
+    weight,
+    color,
+    summary,
+  }));
 
-  const overall = Math.round(
-    subScores.reduce((acc, s) => acc + s.score * s.weight, 0)
-  );
-  const band = bandFor(overall);
+  const { overall, band } = breakdown;
   const { drags, lifts } = nudgesFor(profile, subScores);
   const quotes = quotesFor(profile, subScores, overall);
   const narrative = narrativeFor(profile, overall, band, drags, lifts);
